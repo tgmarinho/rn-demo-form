@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import React, { useRef } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import {
   Button,
   LayoutChangeEvent,
@@ -36,14 +36,13 @@ export default function FormScreen2() {
   const positions = useRef<Record<keyof FormValues, number>>(
     {} as Record<keyof FormValues, number>
   );
-  const inputRefs = useRef<Record<keyof FormValues, TextInput | null>>(
-    {} as Record<keyof FormValues, TextInput | null>
-  );
 
   const {
-    control,
+    register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onSubmit",
@@ -60,17 +59,15 @@ export default function FormScreen2() {
     if (typeof y === "number" && scrollRef.current) {
       scrollRef.current.scrollTo({ y: y - 150, animated: true });
     }
-
-    const inputRef = inputRefs.current[firstErrorField];
-    if (inputRef) {
-      setTimeout(() => {
-        inputRef.focus();
-      }, 300);
-    }
   };
 
   const onSubmit = (data: FormValues) => {
     console.log(data);
+  };
+
+  // Função auxiliar para formatar o nome do campo
+  const formatFieldName = (field: string) => {
+    return field.charAt(0).toUpperCase() + field.slice(1);
   };
 
   return (
@@ -103,25 +100,15 @@ export default function FormScreen2() {
               onLayout={onLayout(field)}
               style={styles.inputContainer}
             >
-              <Text style={styles.label}>
-                {field.charAt(0).toUpperCase() + field.slice(1)}
-              </Text>
-              <Controller
-                control={control}
-                name={field}
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    ref={(ref) => {
-                      inputRefs.current[field] = ref;
-                    }}
-                    onChangeText={onChange}
-                    value={value}
-                    secureTextEntry={field === "password"}
-                    placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                    style={[styles.input, errors[field] && styles.inputError]}
-                    placeholderTextColor="#999"
-                  />
-                )}
+              <Text style={styles.label}>{formatFieldName(field)}</Text>
+              <TextInput
+                {...register(field)}
+                onChangeText={(text) => setValue(field, text)}
+                value={watch(field)}
+                secureTextEntry={field === "password"}
+                placeholder={formatFieldName(field)}
+                style={[styles.input, errors[field] && styles.inputError]}
+                placeholderTextColor="#999"
               />
               {errors[field] && (
                 <Text style={styles.errorText}>{errors[field]?.message}</Text>
