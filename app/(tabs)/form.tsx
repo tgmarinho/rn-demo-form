@@ -1,8 +1,6 @@
-import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Image } from "expo-image";
 import React, { useRef } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import {
   Button,
   LayoutChangeEvent,
@@ -15,17 +13,21 @@ import {
 import { z } from "zod";
 
 const schema = z.object({
-  firstName: z.string().min(2),
-  lastName: z.string().min(2),
-  email: z.string().email(),
-  mobile: z.string().min(2),
-  ssn: z.string().min(2),
-  confirmSsn: z.string().min(2),
-  contactEmergencyName: z.string().min(2),
-  contactEmergencyMobile: z.string().min(2),
-  password: z.string().min(6),
-  address: z.string().min(2),
-  city: z.string().min(2),
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  mobile: z.string().min(2, "Mobile must be at least 2 characters"),
+  ssn: z.string().min(2, "SSN must be at least 2 characters"),
+  confirmSsn: z.string().min(2, "Confirm SSN must be at least 2 characters"),
+  contactEmergencyName: z
+    .string()
+    .min(2, "Emergency contact name must be at least 2 characters"),
+  contactEmergencyMobile: z
+    .string()
+    .min(2, "Emergency contact mobile must be at least 2 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  address: z.string().min(2, "Address must be at least 2 characters"),
+  city: z.string().min(2, "City must be at least 2 characters"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -36,9 +38,11 @@ export default function FormScreen2() {
   );
 
   const {
-    control,
+    register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onSubmit",
@@ -49,10 +53,11 @@ export default function FormScreen2() {
   };
 
   const onInvalid = () => {
-    const first = Object.keys(errors)[0] as keyof FormValues;
-    const y = positions.current[first];
-    if (typeof y === "number") {
-      scrollRef.current?.scrollTo({ y, animated: true });
+    const firstErrorField = Object.keys(errors)[0] as keyof FormValues;
+    const y = positions.current[firstErrorField];
+
+    if (typeof y === "number" && scrollRef.current) {
+      scrollRef.current.scrollTo({ y: y - 150, animated: true });
     }
   };
 
@@ -60,79 +65,105 @@ export default function FormScreen2() {
     console.log(data);
   };
 
+  // Função auxiliar para formatar o nome do campo
+  const formatFieldName = (field: string) => {
+    return field.charAt(0).toUpperCase() + field.slice(1);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
-      headerImage={
-        <Image
-          source={require("@/assets/images/partial-react-logo.png")}
-          style={styles.reactLogo}
-        />
-      }
-    >
+    <View style={styles.container}>
       <ScrollView
         ref={scrollRef}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 20 }}
+        contentContainerStyle={styles.contentContainer}
       >
-        {(
-          [
-            "firstName",
-            "lastName",
-            "email",
-            "mobile",
-            "ssn",
-            "confirmSsn",
-            "contactEmergencyName",
-            "contactEmergencyMobile",
-            "address",
-            "city",
-            "password",
-          ] as (keyof FormValues)[]
-        ).map((field) => (
-          <View
-            key={field}
-            onLayout={onLayout(field)}
-            style={{ marginBottom: 20 }}
-          >
-            <Text>{field}</Text>
-            <Controller
-              control={control}
-              name={field}
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  onChangeText={onChange}
-                  value={value}
-                  secureTextEntry={field === "password"}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: errors[field] ? "red" : "#ccc",
-                    padding: 8,
-                    borderRadius: 4,
-                  }}
-                />
+        <View style={styles.container}>
+          {/* Espaço para o "header" com margem superior */}
+          <View style={styles.header} />
+          {(
+            [
+              "firstName",
+              "lastName",
+              "email",
+              "mobile",
+              "ssn",
+              "confirmSsn",
+              "contactEmergencyName",
+              "contactEmergencyMobile",
+              "address",
+              "city",
+              "password",
+            ] as (keyof FormValues)[]
+          ).map((field) => (
+            <View
+              key={field}
+              onLayout={onLayout(field)}
+              style={styles.inputContainer}
+            >
+              <Text style={styles.label}>{formatFieldName(field)}</Text>
+              <TextInput
+                {...register(field)}
+                onChangeText={(text) => setValue(field, text)}
+                value={watch(field)}
+                secureTextEntry={field === "password"}
+                placeholder={formatFieldName(field)}
+                style={[styles.input, errors[field] && styles.inputError]}
+                placeholderTextColor="#999"
+              />
+              {errors[field] && (
+                <Text style={styles.errorText}>{errors[field]?.message}</Text>
               )}
+            </View>
+          ))}
+          {/* Espaço para o "footer" com margem inferior */}
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Submit"
+              onPress={handleSubmit(onSubmit, onInvalid)}
             />
-            {errors[field] && (
-              <Text style={{ color: "red" }}>{errors[field]?.message}</Text>
-            )}
           </View>
-        ))}
-        <Button title="Submit" onPress={handleSubmit(onSubmit, onInvalid)} />
+          <View style={styles.footer} />
+        </View>
       </ScrollView>
-    </ParallaxScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  container: {
+    paddingHorizontal: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  contentContainer: {
+    backgroundColor: "#fff",
+    paddingBottom: 40, // Margem inferior aumentada
+  },
+  header: {
+    height: 60, // Margem superior como espaço vazio
+    backgroundColor: "#fff",
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    borderRadius: 6,
+    backgroundColor: "#fff",
+    color: "#000",
+  },
+  inputError: {
+    borderColor: "red",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 12,
+    marginTop: 4,
   },
   reactLogo: {
     height: 178,
@@ -140,5 +171,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     position: "absolute",
+  },
+  buttonContainer: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  footer: {
+    height: 60, // Margem inferior como espaço vazio
+    backgroundColor: "#fff",
   },
 });
